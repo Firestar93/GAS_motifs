@@ -6,6 +6,9 @@
 4. IdentifySNPs_from_dbSNP.py to identify destroying SNPs
 5. create_VCF.py to create VCF file
 6. plot_3AND4gappers_all_AND_perChr.R
+7. getGeneClassification.R to get gene list classifications of interests
+8. get_surrounding_genes.py to get genes surrounding SNPs in high acetylation and filter SNPs with list from step before
+9. 
 
 
 ####OLD CODE #####

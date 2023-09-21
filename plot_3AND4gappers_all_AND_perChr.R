@@ -6,7 +6,8 @@ library(stringr)
 #####
 #SNPS
 #total number of SNPs in 3 spacers and 4 spacers
-allSNPs = read.csv(file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\hg38_all_potential_SNPs.sorted.vcf", sep = "\t", comment.char = "#", header = FALSE)
+#allSNPs = read.csv(file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\hg38_all_potential_SNPs.sorted.vcf", sep = "\t", comment.char = "#", header = FALSE)
+allSNPs = read.csv(file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\PBMC_TCell\\SNPs_in_highAcetylation.vcf", sep = "\t", comment.char = "#", header = FALSE)
 allSNPs <- subset(allSNPs, select = c(V1,V8))
 
 
@@ -14,7 +15,7 @@ word_counts <- allSNPs %>%
   group_by(V8) %>% 
   summarise(count = n())
 
-new_max_value = max(word_counts$count) + 75000
+new_max_value = max(word_counts$count) + 5000
 
 ggplot(word_counts, aes(x = V8, y = count)) +
   geom_bar(stat = "identity") +
