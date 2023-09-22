@@ -57,14 +57,28 @@ def create_link(config: {}):
 def create_link_snps(snps):
     config = build_config(snps)
 
-    with open("/home/markus/Dropbox/UNI/NIH_Projects/GAS_motifs_SNPs/found_SNPs/config.json", "w") as f:
+    with open("C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\PBMC_TCell\\config.json", "w") as f:
         json.dump(config, f)
 
     return create_link(config)
 
 if __name__ == "__main__":
 
-    input_dir="/home/markus/Dropbox/UNI/NIH_Projects/GAS_motifs_SNPs/found_SNPs/SurvivingSNPs_AFTERH3K27ac.bed"
+    input_file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\PBMC_TCell\\SNPs_in_highAcetylation_AND_immuneGenes_AND_STATsignals.vcf"
+    df_snps = pd.read_csv(input_file, sep='\t', comment="#", header=None)
+    snps = df_snps[2].tolist()
+
+    snps_A = snps[:len(snps) // 2]
+    snps_B = snps[len(snps) // 2:]
+
+    print(create_link_snps(snps_B))
+
+    print("X")
+
+
+
+    """
+    input_dir="C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\old\\SurvivingSNPs_AFTERH3K27ac.bed"
     df_snps = pd.read_csv(input_dir, sep='\t')
     df_snps = df_snps.drop_duplicates(subset=['POS'])
     snps = df_snps["POS"]
@@ -85,6 +99,7 @@ if __name__ == "__main__":
 
     print("X")
     #print(create_link_snps(snps_B))
+    """
 
 
 

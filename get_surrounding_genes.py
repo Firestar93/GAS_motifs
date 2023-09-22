@@ -2,6 +2,10 @@ from Bio import Entrez
 from Bio.SeqFeature import FeatureLocation, CompoundLocation
 import pymysql
 import pandas as pd
+import warnings
+from datetime import datetime
+
+
 
 def fetch_surrounding_genes(chromosome, position, genome_version):
     # Connect to the UCSC database using PyMySQL
@@ -83,6 +87,9 @@ def fetch_surrounding_genes(chromosome, position, genome_version):
 
 if __name__ == "__main__":
 
+    # Suppress all warnings
+    warnings.filterwarnings("ignore")
+
     output_file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\PBMC_TCell\\SNPs_in_highAcetylation_AND_immuneGenes.vcf"
 
     immune_genes_df = pd.read_csv("C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\immune_genes.tsv", sep="\t")
@@ -93,6 +100,10 @@ if __name__ == "__main__":
 
     genome_version = "hg38"
     for index, row in allSNPs_that_survived_acetylationFilter.iterrows():
+
+        if index%10 == 0:
+            current_time = datetime.now()
+            print(str(index) + " @ " + str(current_time))
 
         chromosome = "chr" + row[0]
         position = row[1]
@@ -140,7 +151,7 @@ if __name__ == "__main__":
 
     with open(output_file, 'w') as f:
         f.write(
-            "##fileformat=VCFv4.3\n##fileDate=20090805\n##source=myImputationProgramV3.1\n##reference=file:///seq/references/1000GenomesPilot-NCBI36.fastas\n")
+            "##fileformat=VCFv4.3\n##fileDate=20090805\n##source=myImputationProgramV3.1\n##reference=file:///seq/references/1000GenomesPilot-NCBI36.fastas\n#")
 
     allSNPs_that_survive_thisFilter.to_csv(output_file, index=False, sep='\t', index_label=False, mode="a")
 
