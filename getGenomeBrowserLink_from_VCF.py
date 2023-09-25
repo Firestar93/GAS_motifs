@@ -64,14 +64,14 @@ def create_link_snps(snps):
 
 if __name__ == "__main__":
 
-    input_file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\PBMC_TCell\\SNPs_in_highAcetylation_AND_immuneGenes_AND_STATsignals.vcf"
+    input_file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\CaseinLocus\\hg38_casein_region_SNPs.vcf"
     df_snps = pd.read_csv(input_file, sep='\t', comment="#", header=None)
     snps = df_snps[2].tolist()
 
-    snps_A = snps[:len(snps) // 2]
-    snps_B = snps[len(snps) // 2:]
+    #snps_A = snps[:len(snps) // 2]
+    #snps_B = snps[len(snps) // 2:]
 
-    print(create_link_snps(snps_B))
+    print(create_link_snps(snps))
 
     print("X")
 
