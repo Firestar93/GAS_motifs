@@ -8,7 +8,8 @@
 6. plot_3AND4gappers_all_AND_perChr.R
 7. getGeneClassification.R to get gene list classifications of interests
 8. get_surrounding_genes.py to get genes surrounding SNPs in high acetylation and filter SNPs with list from step before
-9. 
+9. get_highly_induced_targetGenes.R to get highly induced IFN and ILN genes from outside data
+10. filter_IFN_induced.py to filter the SNPs
 
 
 ####OLD CODE #####

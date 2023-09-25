@@ -64,7 +64,7 @@ def create_link_snps(snps):
 
 if __name__ == "__main__":
 
-    input_file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\CaseinLocus\\hg38_casein_region_SNPs.vcf"
+    input_file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\PBMC_TCell\\SNPs_in_highAcetylation_AND_immuneGenes_AND_STATsignals_AND_IFNorILinducedFC50.vcf"
     df_snps = pd.read_csv(input_file, sep='\t', comment="#", header=None)
     snps = df_snps[2].tolist()
 
