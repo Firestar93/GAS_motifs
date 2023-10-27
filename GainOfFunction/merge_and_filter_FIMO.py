@@ -40,6 +40,8 @@ for dirname in sorted(os.listdir(GAS_dir)):
         continue
     if os.path.isdir(dir1):
         print(dir1)
+        df_GAS_oneChr = pd.DataFrame()
+
         for dirname2 in sorted(os.listdir(dir1)):
             dir2 = os.path.join(dir1, dirname2)
             if os.path.isdir(dir2):
@@ -101,8 +103,10 @@ for dirname in sorted(os.listdir(GAS_dir)):
                 df_GAS = df_GAS[column_order]
                 df_GAS['sequence_name'] = df_GAS['sequence_name'].str.replace('chr', '', regex=False)
                 df_GAS = df_GAS.drop_duplicates()
+                df_GAS_oneChr = pd.concat([df_GAS_oneChr, df_GAS], ignore_index=True)
 
-                df_GAS.to_csv(GAS_out_file, mode='a', header=False, index=False, sep="\t")
+        df_GAS_oneChr = df_GAS_oneChr.drop_duplicates()
+        df_GAS_oneChr.to_csv(GAS_out_file, mode='a', header=False, index=False, sep="\t")
 
 print("X")
 
