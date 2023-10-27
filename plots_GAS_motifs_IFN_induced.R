@@ -2,6 +2,7 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 library(stringr)
+library(ggpubr)
 
 snps = read.csv(sep = "\t", comment.char = "#", header = FALSE, file="C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\found_SNPs\\PBMC_TCell\\SNPs_in_highAcetylation_AND_immuneGenes_AND_STATsignals_AND_IFNorILinducedFC50.vcf")
 
@@ -18,9 +19,16 @@ lung_expression = read.csv(sep = "\t", comment.char = "#", file="C:\\Users\\hoff
 kidney_expression = read.csv(sep = "\t", comment.char = "#", file="C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\RNA-seq_Data\\kidney\\normalized_counts_all.tsv")
 tcell_expression = read.csv(sep = "\t", comment.char = "#", file="C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\RNA-seq_Data\\TCells\\normalized_counts_all.tsv")
 
+#lung_expression <- lung_expression[lung_expression$hgnc_symbol %in% unique_values,]
+#kidney_expression <- kidney_expression[kidney_expression$hgnc_symbol %in% unique_values,]
+#tcell_expression <- tcell_expression[tcell_expression$hgnc_symbol %in% unique_values,]
+
+##amendments for presentation
+unique_values<-c("ZBTB17")
 lung_expression <- lung_expression[lung_expression$hgnc_symbol %in% unique_values,]
 kidney_expression <- kidney_expression[kidney_expression$hgnc_symbol %in% unique_values,]
 tcell_expression <- tcell_expression[tcell_expression$hgnc_symbol %in% unique_values,]
+##amendments for presentation
 
 lung_expression_long <- lung_expression %>%
   gather(key = "condition", value = "value", -hgnc_symbol)
@@ -32,7 +40,6 @@ kidney_expression_long <- kidney_expression %>%
 colnames(kidney_expression_long)<- c('gene','condition','gene_counts')
 kidney_expression_long$condition <- gsub("ID\\d*_", "", kidney_expression_long$condition)
 
-
 tcell_expression_long <- tcell_expression %>%
   gather(key = "condition", value = "value", -hgnc_symbol)
 colnames(tcell_expression_long)<- c('gene','condition','gene_counts')
@@ -41,12 +48,18 @@ tcell_expression_long$condition <- str_match(tcell_expression_long$condition, "^
 palette_12 <- c("#D32F2F", "#1976D2", "#388E3C", "#FBC02D", "#8E24AA", "#F57C00", 
                 "#0288D1", "#7B1FA2", "#C2185B", "#7B1FA2", "#C2185B", "#0288D1")
 
-ggplot(lung_expression_long, aes(x = gene, y = log10(gene_counts), fill = condition)) +
-  geom_boxplot() + scale_fill_manual(values = palette_12)
 
-ggplot(kidney_expression_long, aes(x = gene, y = log2(gene_counts), fill = condition)) +
-  geom_boxplot() + scale_fill_manual(values = palette_12)
+##amendments for presentation
+values_to_keep <- c("SAEC_Control", "SAEC_GH")
+lung_expression_long <- lung_expression_long[lung_expression_long$condition %in% values_to_keep,]
+##amendments for presentation
 
-ggplot(tcell_expression_long, aes(x = gene, y = log2(gene_counts), fill = condition)) +
-  geom_boxplot() + scale_fill_manual(values = palette_12)
+ggplot(lung_expression_long, aes(x = gene, y = gene_counts, fill = condition)) +
+  geom_boxplot() + scale_fill_manual(values = palette_12) + stat_compare_means(method = "t.test")
+
+ggplot(kidney_expression_long, aes(x = gene, y = gene_counts, fill = condition)) +
+  geom_boxplot() + scale_fill_manual(values = palette_12) + stat_compare_means(method = "t.test")
+
+ggplot(tcell_expression_long, aes(x = gene, y = gene_counts, fill = condition)) +
+  geom_boxplot() + scale_fill_manual(values = palette_12) + stat_compare_means(method = "t.test", comparisons = c(c("Unstim","IL6")))
 

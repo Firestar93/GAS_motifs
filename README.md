@@ -1,4 +1,8 @@
-### REANALYSIS ###
+### REANALYSIS (GAIN OF FUNCTION) ###
+1. Run FIMO (run_fimo_automatically.py)
+2. merge_and_filter_FIMO.py to get all almost GAS motifs with only one change, name them, and put it into VCF
+
+### REANALYSIS (LOSS OF FUNCTION AND 4 SPACERS) ###
 
 1. AlterChromosomeFasta_for_FIMO.py (makes the chr.fa readable for FIMO)
 2. Run FIMO
@@ -11,6 +15,7 @@
 9. get_highly_induced_targetGenes.R to get highly induced IFN and ILN genes from outside data (Jakub, HK, GEO) and produce normalized counts
 10. filter_IFN_induced.py to filter the SNPs
 11. plots_GAS_motifs_IFN_induced.R to plot expression
+12. getOnly4Spacers.py will give you only 4 spacers to search for gain of function SNPs (i.e., makes a 3 spacer out of a 4 spacer)
 
 
 ####OLD CODE #####
