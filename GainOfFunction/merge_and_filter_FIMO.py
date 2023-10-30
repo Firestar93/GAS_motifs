@@ -36,8 +36,6 @@ GAS_out_file = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\
 
 for dirname in sorted(os.listdir(GAS_dir)):
     dir1 = os.path.join(GAS_dir, dirname)
-    if dirname!="chr1":
-        continue
     if os.path.isdir(dir1):
         print(dir1)
         df_GAS_oneChr = pd.DataFrame()
