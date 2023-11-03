@@ -1,6 +1,7 @@
 ### REANALYSIS (GAIN OF FUNCTION) ###
 1. Run FIMO (run_fimo_automatically.py)
 2. merge_and_filter_FIMO.py to get all almost GAS motifs with only one change, name them, and put it into VCF
+3. get_create_GAS_motif_SNPs.py get SNPs that create a GAS motif 
 
 ### REANALYSIS (LOSS OF FUNCTION AND 4 SPACERS) ###
 
