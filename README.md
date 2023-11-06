@@ -5,7 +5,8 @@
 4. use genome browser with wiggle cutoff and window to get genes in high acetylation (higher than 20)
 5. get_surrounding_genes.py to get genes surrounding SNPs in high acetylation and filter SNPs with list from step before
 6. check_dbSNP.py checks dbSNP if the nucleotide to create a GAS motif was observed in at least 2 samples from either the same or two different studies
-7. X
+7. clean_mess.py where one merge altered the SNP positions wrongly 
+8. check_geneDistance.py to check the gene distance and if it is upstream or downstream
 
 
 

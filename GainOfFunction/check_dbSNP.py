@@ -78,17 +78,13 @@ def get_snp_info(rsid, info):
                 mutation_counts = count_mutations(allele_annotations)
 
                 target_nucleotide, change_needed = parse_gas_pattern(info)
-                # Check if we need a significant change
-                if change_needed:
-                    # Filter mutation_counts based on target_nucleotide and the significant change
-                    significant_mutations = {
-                        mutation: count for mutation, count in mutation_counts.items()
-                        if mutation[1] == target_nucleotide and count > 1
-                    }
 
-                    # If there are no significant mutations, return None
-                    if significant_mutations:
-                        return None, None, None, None
+                is_mutation_greater_than_one = any(
+                    value > 1 for key, value in mutation_counts.items() if key[1] == target_nucleotide)
+
+                #If there are no significant mutations, return None
+                if not is_mutation_greater_than_one:
+                    return None, None, None, None
 
                 # Initialize containers for allele frequency data
                 num_studies = 0
@@ -103,18 +99,20 @@ def get_snp_info(rsid, info):
                         num_samples += frequency.get('total_count', 0)
                         mutation_samples += frequency.get('allele_count', 0)
 
-
-
                 return mutation_counts, num_studies, num_samples, mutation_samples
             else:
                 print(f"Failed to retrieve data for {rsid}")
-                return None, None, None
+                return None, None, None, None
         except requests.Timeout:
             print(f"Timeout occurred for {rsid}, attempt {attempt + 1}/100")
         except requests.RequestException as e:
             print(f"Request failed for {rsid}, attempt {attempt + 1}/100. Error: {e}")
         except Exception as e:
             print(f"An unexpected error occurred for {rsid}, attempt {attempt + 1}/100. Error: {e}")
+            exception_message = str(e)
+            if exception_message == "'primary_snapshot_data'":
+                print(f"Will not re-attempt for {rsid}")
+                return None, None, None, None
 
         sleep(5)
         attempt += 1
