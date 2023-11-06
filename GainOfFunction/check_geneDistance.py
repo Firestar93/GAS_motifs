@@ -1,18 +1,44 @@
 from Bio import Entrez
 import pandas as pd
 import re
+import time
 
 def get_gene_info(gene_symbol, email):
-    Entrez.email = email  # Set your email
-    handle = Entrez.esearch(db="gene", term=f"{gene_symbol}[Gene Name] AND Homo sapiens[Organism]")
-    search_results = Entrez.read(handle)
-    handle.close()
+
+    Entrez.email = email
+
+    max_attempts = 100
+    attempt = 0
+    search_results = None
+
+    while attempt < max_attempts and search_results is None:
+        try:
+            handle = Entrez.esearch(db="gene", term=f"{gene_symbol}[Gene Name] AND Homo sapiens[Organism]")
+            search_results = Entrez.read(handle)
+            handle.close()
+            break  # Success, so break out of the loop
+        except Exception as e:  # Can specify the exact exception if known
+            print(f"Attempt {attempt + 1} failed with error: {e} for gene {gene_symbol}")
+            attempt += 1
+            time.sleep(5)
 
     # Validate that the search results contain the expected gene symbol
     for gene_id in search_results['IdList']:
-        handle = Entrez.efetch(db="gene", id=gene_id, retmode="xml")
-        gene_records = Entrez.read(handle)
-        handle.close()
+
+        max_attempts_inner = 100
+        attempt_inner = 0
+        gene_records = None
+
+        while attempt_inner < max_attempts_inner and gene_records is None:
+            try:
+                handle = Entrez.efetch(db="gene", id=gene_id, retmode="xml")
+                gene_records = Entrez.read(handle)
+                handle.close()
+                break  # Success, so break out of the loop
+            except Exception as e:  # Can specify the exact exception if known
+                print(f"Attempt {attempt_inner + 1} failed with error: {e}")
+                attempt_inner += 1
+                time.sleep(1)
 
         # Check each gene record for the correct gene symbol and extract the required information
         for gene_record in gene_records:
@@ -89,7 +115,15 @@ for index, row in input_SNPs.iterrows():
     # Get the POS value as a variable
     position = row['POS']
     start, end, strand = get_gene_info(gene_name, email)
+
+
+    if None in (start, end, strand):
+        continue
+
     relative_position, distance = determine_position_relative_to_gene(start, end, strand, position)
+
+    if None in (relative_position, distance):
+        continue
 
     if relative_position == 'upstream':
         if distance <= 10000:
