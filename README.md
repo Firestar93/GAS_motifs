@@ -2,6 +2,13 @@
 1. Run FIMO (run_fimo_automatically.py)
 2. merge_and_filter_FIMO.py to get all almost GAS motifs with only one change, name them, and put it into VCF
 3. get_create_GAS_motif_SNPs.py get SNPs that create a GAS motif 
+4. use genome browser with wiggle cutoff and window to get genes in high acetylation (higher than 20)
+5. get_surrounding_genes.py to get genes surrounding SNPs in high acetylation and filter SNPs with list from step before
+6. check_dbSNP.py checks dbSNP if the nucleotide to create a GAS motif was observed in at least 2 samples from either the same or two different studies
+7. X
+
+
+
 
 ### REANALYSIS (LOSS OF FUNCTION AND 4 SPACERS) ###
 
