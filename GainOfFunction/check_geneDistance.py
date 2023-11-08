@@ -3,6 +3,28 @@ import pandas as pd
 import re
 import time
 
+
+def modify_row(row_inner, gene_to_modify, new_position, distance_value):
+    # Extract the INFO string from the row
+    info_str = row_inner['INFO']
+    # Split the INFO field into gene blocks
+    gene_blocks = info_str.split(';')
+
+    # Process each gene block
+    modified_blocks = []
+    for block in gene_blocks:
+        # Use a regex pattern to check if this block contains the gene we want to modify
+        if re.search(rf"\(gene='{re.escape(gene_to_modify)}'", block):
+            # Replace the position value and insert the distance value right after
+            pattern = rf"(position=')[^']+(')"
+            replacement = f"\\1{new_position}\\2,distance={distance_value}"
+            block = re.sub(pattern, replacement, block)
+        modified_blocks.append(block)
+
+    # Reassemble the INFO field and update the row
+    row_inner['INFO'] = ';'.join(modified_blocks)
+    return row_inner
+
 def get_gene_info(gene_symbol, email):
 
     Entrez.email = email
@@ -89,9 +111,10 @@ def determine_position_relative_to_gene(gene_start, gene_end, strand, nucleotide
 email = "markus.hoffmann@nih.gov"
 
 output_less10kb_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB.vcf"
-output_more10kb_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB.vcf"
-output_downstream_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB.vcf"
-output_within_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB.vcf"
+output_more10kb_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamMore10KB.vcf"
+output_downstream_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_downstream.vcf"
+output_within_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_within.vcf"
+output_multiple_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_multipleTargets.vcf"
 
 input_filtered_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED.vcf"
 input_SNPs = pd.read_csv(input_filtered_VCF, comment='#', sep='\t', header=0)
@@ -102,6 +125,7 @@ df_SNPs_upstream_less10kb = pd.DataFrame(columns=columns)
 df_SNPs_upstream_more10kb = pd.DataFrame(columns=columns)
 df_SNPs_downstream = pd.DataFrame(columns=columns)
 df_SNPs_within = pd.DataFrame(columns=columns)
+df_SNPs_multiple = pd.DataFrame(columns=columns)
 
 gene_pattern = re.compile(r"gene='(.*?)'")
 
@@ -109,41 +133,92 @@ counter = 0
 
 for index, row in input_SNPs.iterrows():
     # Extract the gene name from the INFO column
-    gene_search = gene_pattern.search(row['INFO'])
-    gene_name = gene_search.group(1) if gene_search else 'Unknown'
+    #
+    info_str = row['INFO']
+    gene_blocks = info_str.split(';')
+    matches = re.findall(gene_pattern, row['INFO'])
+    df_SNPs_temp = pd.DataFrame(
+        columns=['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'GENE', 'POSITION',
+                 'DISTANCE'])
 
-    # Get the POS value as a variable
-    position = row['POS']
-    start, end, strand = get_gene_info(gene_name, email)
+    for gene_block in gene_blocks:
+        gene_search = gene_pattern.search(gene_block)
+
+        if gene_search:
+            for group in gene_search.groups():
+                gene_name = group
+
+                # Get the POS value as a variable
+                position = row['POS']
+                start, end, strand = get_gene_info(gene_name, email)
+
+                if None in (start, end, strand):
+                    continue
+
+                relative_position, distance = determine_position_relative_to_gene(start, end, strand, position)
+
+                if None in (relative_position, distance):
+                    continue
+
+                print(str(len(matches)))
+
+                if len(matches) > 1:
+                    row_multiple = row
+                    row_multiple['GENE'] = gene_name
+                    row_multiple['POSITION'] = relative_position
+                    row_multiple['DISTANCE'] = distance
+
+                    df_SNPs_temp = df_SNPs_temp._append(row_multiple)
+                    print("FOUND MORE THAN ONE IMMUNE GENE FOR ONE SNP")
+                    continue
+
+                row_modified = modify_row(row_inner=row, gene_to_modify=gene_name, new_position=relative_position,
+                                          distance_value=distance)
+
+                if relative_position == 'upstream':
+                    if distance <= 10000:
+                        df_SNPs_upstream_less10kb = df_SNPs_upstream_less10kb._append(row_modified)
+                    else:
+                        df_SNPs_upstream_more10kb = df_SNPs_upstream_more10kb._append(row_modified)
+                elif relative_position == 'downstream':
+                    df_SNPs_downstream = df_SNPs_downstream._append(row_modified)
+                elif relative_position == 'within':
+                    df_SNPs_within = df_SNPs_within._append(row_modified)
+
+                counter += 1
+                # Check if the counter is divisible by 10
+                if counter % 10 == 0:
+                    print(f"Checked {counter} gene - rsID combinations...")
+
+    if not df_SNPs_temp.empty:
+        df_SNPs_temp.reset_index(drop=True, inplace=True)
+        for index_temp, row_temp in df_SNPs_temp.iterrows():
+            gene_name = row_temp['GENE']
+            relative_position = row_temp['POSITION']
+            distance = row_temp['DISTANCE']
+
+            row_modified = modify_row(row_inner=row_temp, gene_to_modify=gene_name, new_position=relative_position,
+                                      distance_value=distance)
+            df_SNPs_temp['INFO'] = row_modified['INFO']
+        df_SNPs_temp = df_SNPs_temp.drop('GENE', axis=1)
+        df_SNPs_temp = df_SNPs_temp.drop('POSITION', axis=1)
+        df_SNPs_temp = df_SNPs_temp.drop('DISTANCE', axis=1)
+        last_row = df_SNPs_temp.iloc[-1]
+        df_SNPs_multiple = df_SNPs_multiple._append(last_row)
+        df_SNPs_temp = pd.DataFrame(columns=['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT','GENE','POSITION','DISTANCE'])
 
 
-    if None in (start, end, strand):
-        continue
-
-    relative_position, distance = determine_position_relative_to_gene(start, end, strand, position)
-
-    if None in (relative_position, distance):
-        continue
-
-    if relative_position == 'upstream':
-        if distance <= 10000:
-            df_SNPs_upstream_less10kb = df_SNPs_upstream_less10kb._append(row)
-        else:
-            df_SNPs_upstream_more10kb = df_SNPs_upstream_more10kb._append(row)
-    elif relative_position == 'downstream':
-        df_SNPs_downstream = df_SNPs_downstream._append(row)
-    elif relative_position == 'within':
-        df_SNPs_within = df_SNPs_within._append(row)
-
-    counter += 1
-    # Check if the counter is divisible by 10
-    if counter % 10 == 0:
-        print(f"Checked {counter} rsIDs...")
 
 df_SNPs_upstream_less10kb.reset_index(drop=True, inplace=True)
 df_SNPs_upstream_more10kb.reset_index(drop=True, inplace=True)
 df_SNPs_downstream.reset_index(drop=True, inplace=True)
 df_SNPs_within.reset_index(drop=True, inplace=True)
+df_SNPs_multiple.reset_index(drop=True, inplace=True)
+
+with open(output_multiple_VCF, 'w') as f:
+    f.write("##fileformat=VCFv4.3\n##fileDate=20090805\n##source=myImputationProgramV3.1\n##reference=file:///seq/references/1000GenomesPilot-NCBI36.fastas\n#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19909\n")
+# Write vcf_data_filtered to a file without the index and header
+df_SNPs_multiple.to_csv(output_less10kb_VCF, sep='\t', index=False, header=False, mode='a')
 
 with open(output_less10kb_VCF, 'w') as f:
     f.write("##fileformat=VCFv4.3\n##fileDate=20090805\n##source=myImputationProgramV3.1\n##reference=file:///seq/references/1000GenomesPilot-NCBI36.fastas\n#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19909\n")
