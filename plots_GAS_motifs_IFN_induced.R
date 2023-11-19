@@ -24,7 +24,7 @@ tcell_expression = read.csv(sep = "\t", comment.char = "#", file="C:\\Users\\hof
 #tcell_expression <- tcell_expression[tcell_expression$hgnc_symbol %in% unique_values,]
 
 ##amendments for presentation
-unique_values<-c("ZBTB17")
+unique_values<-c("RSAD2","CMPK2")
 lung_expression <- lung_expression[lung_expression$hgnc_symbol %in% unique_values,]
 kidney_expression <- kidney_expression[kidney_expression$hgnc_symbol %in% unique_values,]
 tcell_expression <- tcell_expression[tcell_expression$hgnc_symbol %in% unique_values,]

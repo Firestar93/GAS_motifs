@@ -7,7 +7,9 @@
 6. check_dbSNP.py checks dbSNP if the nucleotide to create a GAS motif was observed in at least 2 samples from either the same or two different studies
 7. clean_mess.py where one merge altered the SNP positions wrongly 
 8. check_geneDistance.py to check the gene distance and if it is upstream or downstream
-
+9. use all available GAS motifs and use algorithmic bed tools to search for SNPs that have a close GAS motif (200 bp)
+10. removeSNPsWithCloseGASmotifs.py to remove all SNPs that have a GAS motif too close to narrow down possiblities.
+11. identify_SNPs_in_homologous_regions.py to get only SNPs in GAS motifs that are in homologous regions between mouse and human
 
 
 
