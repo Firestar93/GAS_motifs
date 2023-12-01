@@ -4,6 +4,8 @@ from itertools import product
 import pandas as pd
 from Bio import Entrez
 import time
+from datetime import datetime
+
 import re
 
 ENSEMBL_REST_API = "http://rest.ensembl.org"
@@ -179,20 +181,51 @@ def get_human_genes_and_sequence(chromosome, start, end):
     """
     Get genes and sequence for a specified region in the human genome.
     """
+
     region = f"{chromosome}:{start}-{end}"
     sequence_url = f"{ENSEMBL_REST_API}/sequence/region/human/{region}?coord_system_version=GRCh38"
     genes_url = f"{ENSEMBL_REST_API}/overlap/region/human/{region}?feature=gene"
 
-    # Fetch the sequence for the region
-    sequence_response = requests.get(sequence_url, headers={'Content-Type': 'text/plain'})
-    if not sequence_response.ok:
-        sequence_response.raise_for_status()
+    attempts = 0
+    max_attempts = 100
+    sleep_time = 5  # time to wait before retrying in seconds
+    success = False
+    sequence_response = ""
+
+    # Retry connection loop
+    while not success and attempts < max_attempts:
+        try:
+            # Fetch the sequence for the region
+            sequence_response = requests.get(sequence_url, headers={'Content-Type': 'text/plain'})
+            success = True
+        except Exception as e:
+            print(f"Sequence Connection attempt {attempts + 1} failed: {e}")
+            time.sleep(sleep_time)  # wait before retrying
+            attempts += 1
+
+    if sequence_response != "":
+        if not sequence_response.ok:
+            sequence_response.raise_for_status()
     sequence = sequence_response.text
 
+    attempts_gene = 0
+    max_attempts_genes = 100
+    success = False
+    genes_response = ""
+
     # Fetch the genes in the region
-    genes_response = requests.get(genes_url, headers={'Content-Type': 'application/json'})
-    if not genes_response.ok:
-        genes_response.raise_for_status()
+    while not success and attempts_gene < max_attempts_genes:
+        try:
+            genes_response = requests.get(genes_url, headers={'Content-Type': 'application/json'})
+            success = True
+        except Exception as e:
+            print(f"Gene Connection attempt {attempts + 1} failed: {e}")
+            time.sleep(sleep_time)  # wait before retrying
+            attempts_gene += 1
+    if genes_response != "":
+        if not genes_response.ok:
+            genes_response.raise_for_status()
+
     genes_data = genes_response.json()
 
     # Extract only the external names of the genes
@@ -204,23 +237,46 @@ def get_mouse_homolog_for_human_gene(human_gene_symbol):
     """
     Get the mouse homolog for a given human gene symbol.
     """
+
+    attempts = 0
+    max_attempts = 100
+    sleep_time = 5  # time to wait before retrying in seconds
+    success = False
+    response = ""
+
+
+
     endpoint = f"{ENSEMBL_REST_API}/homology/symbol/human/{human_gene_symbol}?target_species=mouse"
-    response = requests.get(endpoint, headers=HEADERS)
-    if response.ok:
-        data = response.json()
-        ensembl_mouse_ids = [homology['target']['id'] for homology in data['data'][0]['homologies'] if
-                             homology['target']['species'] == 'mus_musculus']
 
-        mg = mygene.MyGeneInfo()
-        gene_info = mg.querymany(ensembl_mouse_ids, scopes='ensemblgene', fields='symbol', species='mouse')
-        mgi_symbols = {hit.get('symbol') for hit in gene_info if 'symbol' in hit}
-        mgi_symbols_list = list(mgi_symbols)
-        first_mgi_symbol = mgi_symbols_list[0] if mgi_symbols_list else None
+    while not success and attempts < max_attempts:
+        try:
+            response = requests.get(endpoint, headers=HEADERS)
+            success = True
+        except Exception as e:
+            print(f"Sequence Connection attempt {attempts + 1} failed: {e}")
+            time.sleep(sleep_time)  # wait before retrying
+            attempts += 1
+    if response != "":
+        if response.ok:
+            data = response.json()
 
-        return first_mgi_symbol
-    else:
-        print(f"Error fetching homolog for human gene {human_gene_symbol}")
-        return None
+            try:
+                ensembl_mouse_ids = [homology['target']['id'] for homology in data['data'][0]['homologies'] if
+                                     homology['target']['species'] == 'mus_musculus']
+            except Exception as e:
+                print('Could not find mgi symbol for hgnc symbol skipping: ' + rs_ID)
+                return None
+
+            mg = mygene.MyGeneInfo()
+            gene_info = mg.querymany(ensembl_mouse_ids, scopes='ensemblgene', fields='symbol', species='mouse')
+            mgi_symbols = {hit.get('symbol') for hit in gene_info if 'symbol' in hit}
+            mgi_symbols_list = list(mgi_symbols)
+            first_mgi_symbol = mgi_symbols_list[0] if mgi_symbols_list else None
+
+            return first_mgi_symbol
+        else:
+            print(f"Error fetching homolog for human gene {human_gene_symbol}")
+            return None
 
 def get_gene_coordinates_and_sequence(mgi_symbol, kb_upstream_length):
     gene_symbol = mgi_symbol
@@ -230,35 +286,69 @@ def get_gene_coordinates_and_sequence(mgi_symbol, kb_upstream_length):
     lookup_url = f"http://rest.ensembl.org/lookup/symbol/mus_musculus/{gene_symbol}"
     sequence_url = "http://rest.ensembl.org/sequence/region/mus_musculus/"
 
-    # Step 1: Get gene information
-    lookup_response = requests.get(lookup_url, headers={'Content-Type': 'application/json'})
-    if lookup_response.ok:
-        gene_info = lookup_response.json()
-        chromosome = gene_info['seq_region_name']
-        gene_start = gene_info['start']
-        gene_end = gene_info['end']
-        strand = gene_info['strand']
+    attempts = 0
+    max_attempts = 100
+    sleep_time = 5  # time to wait before retrying in seconds
+    success = False
+    lookup_response = ""
 
-        # Step 2: Calculate the upstream region start and end based on the strand
-        if strand == 1:
-            upstream_start = max(1, gene_start - upstream_length)  # Ensure start is not less than 1
-            upstream_end = gene_start - 1
-        else:  # gene is on the negative strand
-            upstream_start = gene_end + 1
-            upstream_end = gene_end + upstream_length
+    while not success and attempts < max_attempts:
+        try:
+            # Step 1: Get gene information
+            lookup_response = requests.get(lookup_url, headers={'Content-Type': 'application/json'})
+            success = True
+        except Exception as e:
+            print(f"Sequence Connection attempt {attempts + 1} failed: {e}")
+            time.sleep(sleep_time)  # wait before retrying
+            attempts += 1
 
-        if upstream_start>upstream_end:
-            temp_pos = upstream_end
-            upstream_end = upstream_start
-            upstream_start = temp_pos
+    if lookup_response != "":
+        if lookup_response.ok:
+            gene_info = lookup_response.json()
+            chromosome = gene_info['seq_region_name']
+            gene_start = gene_info['start']
+            gene_end = gene_info['end']
+            strand = gene_info['strand']
 
-        region = f"{chromosome}:{upstream_start}-{upstream_end}"
+            # Step 2: Calculate the upstream region start and end based on the strand
+            if strand == 1:
+                upstream_start = max(1, gene_start - upstream_length)  # Ensure start is not less than 1
+                upstream_end = gene_start - 1
+            else:  # gene is on the negative strand
+                upstream_start = gene_end + 1
+                upstream_end = gene_end + upstream_length
 
-        sequence_url = f"{ENSEMBL_REST_API}/sequence/region/mouse/{region}?coord_system_version=GRCm38"
-        sequence_response = requests.get(sequence_url, headers={'Content-Type': 'text/plain'})
-        if sequence_response.ok:
-            upstream_sequence = sequence = sequence_response.text
-        return chromosome, upstream_start, upstream_end, strand, upstream_sequence
+            if upstream_start>upstream_end:
+                temp_pos = upstream_end
+                upstream_end = upstream_start
+                upstream_start = temp_pos
+
+            region = f"{chromosome}:{upstream_start}-{upstream_end}"
+
+            sequence_url = f"{ENSEMBL_REST_API}/sequence/region/mouse/{region}?coord_system_version=GRCm38"
+
+            attempts_seq = 0
+            max_attempts_seq = 100
+            success_seq = False
+            sequence_response = ""
+
+            while not success_seq and attempts_seq < max_attempts_seq:
+                try:
+                    sequence_response = requests.get(sequence_url, headers={'Content-Type': 'text/plain'})
+                    success_seq = True
+                except Exception as e:
+                    print(f"Sequence Connection attempt {attempts_seq + 1} failed: {e}")
+                    time.sleep(sleep_time)  # wait before retrying
+                    attempts_seq += 1
+
+            if sequence_response != "":
+                if sequence_response.ok:
+                    upstream_sequence = sequence = sequence_response.text
+                    return chromosome, upstream_start, upstream_end, strand, upstream_sequence
+            else:
+                return None, None, None, None, None
+    else:
+        return None, None, None, None, None
 
 email = "markus.hoffmann@nih.gov"
 
@@ -269,12 +359,20 @@ output_less10kb_mouse_bed = "C:\\Users\\hoffmannmd\\OneDrive - National Institut
 input_SNPs = pd.read_csv(input_less10kb_VCF, comment='#', sep='\t', header=0)
 input_SNPs.columns = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
-bedFile_df = pd.DataFrame(columns=['chr', 'start', 'end'])
+bedFile_df = pd.DataFrame(columns=['chr', 'start', 'end', 'name'])
 
 
 rows_to_drop = []
 
+counter = 0
+
 for index, row in input_SNPs.iterrows():
+    if counter % 10 == 0:
+        current_time = datetime.now()
+        print(f"Checked {counter} rsID ..." + str(current_time))
+
+    counter = counter + 1
+
     # Extract the gene name from the INFO column
     #
     info = row['INFO']
@@ -326,6 +424,11 @@ for index, row in input_SNPs.iterrows():
 
         found_potential_motifs = False
 
+        if start_search > end_search:
+            temp = start_search
+            start_search = end_search
+            end_search = temp
+
         # Fetch human genes and sequence
         human_sequence, human_genes = get_human_genes_and_sequence(chromosome, start_search, end_search)
 
@@ -333,9 +436,12 @@ for index, row in input_SNPs.iterrows():
 
         for human_gene_symbol in human_genes:
             mouse_ensembl_id = get_mouse_homolog_for_human_gene(human_gene_symbol)
-            if not mouse_ensembl_id is None:
-                chromosome, upstream_start, upstream_end, strand, mouse_sequence = get_gene_coordinates_and_sequence(
-                    mouse_ensembl_id, 10000)
+            if mouse_ensembl_id is not None:
+                try:
+                    chromosome, upstream_start, upstream_end, strand, mouse_sequence = get_gene_coordinates_and_sequence(
+                        mouse_ensembl_id, 10000)
+                except Exception as e:
+                    print('Unkown exception: ' + rs_ID)
 
                 is_in_human = sequence_after_gas in human_sequence
 
@@ -366,11 +472,13 @@ for index, row in input_SNPs.iterrows():
                     end = start_end[1]
 
                     # Adding to DataFrame
-                    bedFile_df=bedFile_df._append({'chr': chr_inside, 'start': start, 'end': end}, ignore_index=True)
+                    bedFile_df=bedFile_df._append({'chr': chr_inside, 'start': start, 'end': end, 'name' : rs_ID}, ignore_index=True)
 
                 info = info + ';mouse_GrCm37_' + str(chromosome) + ':' + str(upstream_start) + '-' + str(upstream_end) + ':' + str(strand) + '(' + formatted_motif_string + ")"
-
-        row['INFO'] = info
+            else:
+                rows_to_drop.append(index)
+                continue
+        input_SNPs.at[index, 'INFO'] = info
 
         if not found_potential_motifs:
             rows_to_drop.append(index)
