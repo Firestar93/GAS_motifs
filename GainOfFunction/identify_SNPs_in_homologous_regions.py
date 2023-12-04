@@ -48,6 +48,14 @@ def get_gene_info(gene_symbol, email):
                 attempt_inner += 1
                 time.sleep(1)
 
+        chromosome_gene = None
+        for gene_record in gene_records:
+            if 'Entrezgene_location' in gene_record:
+                for location in gene_record['Entrezgene_location']:
+                    if 'Maps_display-str' in location:
+                        chromosome_gene = location['Maps_display-str']
+                        break
+
         # Check each gene record for the correct gene symbol and extract the required information
         for gene_record in gene_records:
             # Check the Gene-ref for the correct gene symbol
@@ -71,9 +79,9 @@ def get_gene_info(gene_symbol, email):
                                                 temp = end
                                                 end = start
                                                 start = temp
-                                            return start, end, strand
+                                            return start, end, strand, chromosome_gene
     # If the correct gene symbol was not found, return None for all
-    return None, None, None,
+    return None, None, None, None
 
 def format_motif_data_with_aggregation(motif_data, chromosome, upstream_start, strand):
     formatted_strings = {}
@@ -325,7 +333,7 @@ def get_gene_coordinates_and_sequence(mgi_symbol, kb_upstream_length):
 
             region = f"{chromosome}:{upstream_start}-{upstream_end}"
 
-            sequence_url = f"{ENSEMBL_REST_API}/sequence/region/mouse/{region}?coord_system_version=GRCm38"
+            sequence_url = f"{ENSEMBL_REST_API}/sequence/region/mouse/{region}?coord_system_version=GRCm39"
 
             attempts_seq = 0
             max_attempts_seq = 100
@@ -352,14 +360,16 @@ def get_gene_coordinates_and_sequence(mgi_symbol, kb_upstream_length):
 
 email = "markus.hoffmann@nih.gov"
 
-input_less10kb_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB.vcf"
-output_less10kb_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB_mouseGASfound.vcf"
-output_less10kb_mouse_bed = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB_mouseGASfound.bed"
+input_less10kb_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB_noGAS_200bp.vcf"
+output_less10kb_VCF = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB_noGAS_200bp_mouseGASfound.vcf"
+output_less10kb_mouse_bed = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB_noGAS_200bp_mouseGASfound.bed"
+output_less10kb_mouse_bed_lookupRegions = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\GAS_motifs\\GainOfFunction\\SNPs_in_highAcetylation_AND_immuneGenes_AND_correctSignTarget_CLEANED_upstreamLess10KB_noGAS_200bp_mouseGASfound_lookupRegions.bed"
 
 input_SNPs = pd.read_csv(input_less10kb_VCF, comment='#', sep='\t', header=0)
 input_SNPs.columns = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
 bedFile_df = pd.DataFrame(columns=['chr', 'start', 'end', 'name'])
+bedFile_LOOKUPREGION_df = pd.DataFrame(columns=['chr', 'start', 'end', 'name'])
 
 
 rows_to_drop = []
@@ -398,10 +408,16 @@ for index, row in input_SNPs.iterrows():
 
             # Store the gene name and distance
             upstream_gene_distances[gene_name] = distance
+        else:
+            continue
 
     for upstream_distance in upstream_gene_distances:
 
-        start_gene, end_gene, strand = get_gene_info(upstream_distance, email)
+        start_gene, end_gene, strand, chromosome_human_gene = get_gene_info(upstream_distance, email)
+
+        if chromosome != chromosome_human_gene:
+            rows_to_drop.append(index)
+            continue
 
         if strand == 1:
             start_search = start_gene - int(upstream_gene_distances[upstream_distance]) - 1000
@@ -432,6 +448,7 @@ for index, row in input_SNPs.iterrows():
         # Fetch human genes and sequence
         human_sequence, human_genes = get_human_genes_and_sequence(chromosome, start_search, end_search)
 
+        human_genes = [gene_name]
         mouse_gene_details = {}
 
         for human_gene_symbol in human_genes:
@@ -440,6 +457,8 @@ for index, row in input_SNPs.iterrows():
                 try:
                     chromosome, upstream_start, upstream_end, strand, mouse_sequence = get_gene_coordinates_and_sequence(
                         mouse_ensembl_id, 10000)
+                    bedFile_LOOKUPREGION_df=bedFile_LOOKUPREGION_df._append({'chr': chromosome, 'start': upstream_start, 'end': upstream_end, 'name' : rs_ID}, ignore_index=True)
+
                 except Exception as e:
                     print('Unkown exception: ' + rs_ID)
 
@@ -474,7 +493,7 @@ for index, row in input_SNPs.iterrows():
                     # Adding to DataFrame
                     bedFile_df=bedFile_df._append({'chr': chr_inside, 'start': start, 'end': end, 'name' : rs_ID}, ignore_index=True)
 
-                info = info + ';mouse_GrCm37_' + str(chromosome) + ':' + str(upstream_start) + '-' + str(upstream_end) + ':' + str(strand) + '(' + formatted_motif_string + ")"
+                info = info + ';mouse_GrCm39_' + str(chromosome) + ':' + str(upstream_start) + '-' + str(upstream_end) + ':' + str(strand) + '(' + formatted_motif_string + ")"
             else:
                 rows_to_drop.append(index)
                 continue
@@ -491,7 +510,8 @@ with open(output_less10kb_VCF, 'w') as f:
 # Write vcf_data_filtered to a file without the index and header
 input_SNPs.to_csv(output_less10kb_VCF, sep='\t', index=False, header=False, mode='a')
 
-bedFile_df.to_csv(output_less10kb_mouse_bed, sep='\t', index=False)
+bedFile_df.to_csv(output_less10kb_mouse_bed, sep='\t', index=False, header=False)
+bedFile_LOOKUPREGION_df.to_csv(output_less10kb_mouse_bed_lookupRegions, sep='\t', index=False, header=False)
 
 
 # Example usage:
