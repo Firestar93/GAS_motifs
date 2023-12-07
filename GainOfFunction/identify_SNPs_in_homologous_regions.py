@@ -5,6 +5,7 @@ import pandas as pd
 from Bio import Entrez
 import time
 from datetime import datetime
+import re
 
 import re
 
@@ -415,7 +416,11 @@ for index, row in input_SNPs.iterrows():
 
         start_gene, end_gene, strand, chromosome_human_gene = get_gene_info(upstream_distance, email)
 
-        if chromosome != chromosome_human_gene:
+        pattern = r'^(\d+)|([a-zA-Z])'
+        match = re.match(pattern, chromosome_human_gene)
+        extracted = match.group(1) if match.group(1) else match.group(2)
+
+        if chromosome != extracted:
             rows_to_drop.append(index)
             continue
 
