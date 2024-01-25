@@ -30,11 +30,22 @@ def find_enzymes_with_no_hits(enzyme_sequence, sequences):
 
     return enzymes_with_no_hits
 
-directory = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\GainOfFunction\\presentations\\Luciferase"  # Replace with your directory path
+def save_sequence_to_fasta(sequence, key, directory):
+    filename = f"{key}_sequence_including_enzymeSite.fa"
+    file_path = os.path.join(directory, filename)
+
+    with open(file_path, 'w') as file:
+        file.write(f"> {key}\n")  # FASTA header
+        for i in range(0, len(sequence), 50):
+            file.write(sequence[i:i+50] + "\n")
+directory_pre ="C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\GainOfFunction\\presentations\\Luciferase"
+directory = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\GainOfFunction\\presentations\\Luciferase\\Sequence_changedGAS"  # Replace with your directory path
+directory_out = "C:\\Users\\hoffmannmd\\OneDrive - National Institutes of Health\\00_PROJECTS\\GAS_motifs\\GainOfFunction\\presentations\\Luciferase\\including_restriction_enzyme"
+
 file_names = ["IL7R_DNA_sequence.fa", "IRF3_DNA_sequence.fa", "JAK2_DNA_sequence.fa", "JAK3_DNA_sequence.fa", "PTPN2_DNA_sequence.fa","SOCS1_DNA_sequence.fa"]  # Replace with your file names
 csv_filename = "restriction_enzyme_sequences_and_productURL.csv"  # Replace with your CSV filename
 
-csv_file_path = os.path.join(directory, csv_filename)
+csv_file_path = os.path.join(directory_pre, csv_filename)
 enzyme_sequence = read_csv_to_dict(csv_file_path)
 
 sequences = {}
@@ -51,5 +62,15 @@ print("Enzymes with no hits:")
 for enzyme in enzymes_with_no_hits:
     print(enzyme)
 
+
+prefix = "AATTGCTAGC"
+suffix = "GCTAGCGGAT"
+
+for key in sequences:
+    sequences[key] = prefix + sequences[key] + suffix
+
+
+for key, sequence in sequences.items():
+    save_sequence_to_fasta(sequence, key, directory_out)
 
 print("X")
